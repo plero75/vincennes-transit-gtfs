@@ -15,15 +15,24 @@ const GTFS_RT_API = {
   alerts: `${API_BASE}/gtfs-rt-alerts-idfm`
 };
 
-// 📦 Import dynamique de gtfs-realtime-bindings via CDN
+// 📦 Charger gtfs-realtime-bindings depuis unpkg
 let GtfsRealtimeBindings;
 
 async function loadGtfsBindings() {
   if (GtfsRealtimeBindings) return GtfsRealtimeBindings;
   
-  // Utiliser le CDN jsDelivr pour charger gtfs-realtime-bindings
-  const module = await import('https://cdn.jsdelivr.net/npm/gtfs-realtime-bindings@1.2.0/+esm');
-  GtfsRealtimeBindings = module.default || module;
+  // Charger le script depuis unpkg
+  if (typeof window !== 'undefined' && !window.GtfsRealtimeBindings) {
+    await new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://unpkg.com/gtfs-realtime-bindings@1.2.0/dist/index.js';
+      script.onload = resolve;
+      script.onerror = reject;
+      document.head.appendChild(script);
+    });
+    GtfsRealtimeBindings = window.GtfsRealtimeBindings;
+  }
+  
   return GtfsRealtimeBindings;
 }
 
