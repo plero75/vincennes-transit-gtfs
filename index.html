@@ -186,11 +186,12 @@
     .resume-time {
       background: #dbeafe;
       color: #1e40af;
-      padding: 8px 16px;
+      padding: 10px 18px;
       border-radius: 20px;
       display: inline-block;
       font-weight: 600;
-      font-size: 0.9rem;
+      font-size: 1rem;
+      margin-top: 5px;
     }
 
     .loading {
@@ -310,8 +311,11 @@
             <div class="no-service">
               <div class="no-service-icon">🌙</div>
               <div class="no-service-title">Service terminé</div>
-              <div class="no-service-message">Aucun passage prévu pour le moment</div>
-              ${nextService ? `<div class="resume-time">⏰ Reprise ${nextService}</div>` : ''}
+              ${nextService ? `
+                <div class="resume-time">⏰ Reprise ${nextService}</div>
+              ` : `
+                <div class="no-service-message">Aucun passage prévu pour le moment</div>
+              `}
             </div>
           `;
         } else {
