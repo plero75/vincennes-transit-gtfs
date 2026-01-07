@@ -39,6 +39,51 @@
       font-size: 1.1rem;
     }
 
+    .alerts-section {
+      margin-bottom: 20px;
+    }
+
+    .alert-card {
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+      border-left: 5px solid #f59e0b;
+      border-radius: 10px;
+      padding: 15px 20px;
+      margin-bottom: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .alert-header {
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: #92400e;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .alert-description {
+      color: #78350f;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    .alert-routes {
+      margin-top: 10px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .route-badge {
+      background: #f59e0b;
+      color: white;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
     .locations {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
@@ -177,6 +222,8 @@
       <p class="subtitle">Horaires en temps réel - GTFS-Realtime IDFM</p>
     </header>
 
+    <div class="alerts-section" id="alerts"></div>
+
     <div class="locations" id="locations">
       <div class="loading">🔄 Chargement des horaires...</div>
     </div>
@@ -185,21 +232,33 @@
   </div>
 
   <script type="module">
-    import { getLocationSchedules, startAutoRefresh } from './src/index.js';
-    import { STOPS } from './src/config/stops.js';
-    import { getNextServiceTime } from './src/config/service-hours.js';
+    import { getLocationSchedules, getLocationAlerts, startAutoRefresh } from './src/index.js';
 
     const locationsContainer = document.getElementById('locations');
+    const alertsContainer = document.getElementById('alerts');
     const lastUpdateEl = document.getElementById('lastUpdate');
 
     async function updateDashboard() {
       try {
+        // Charger horaires
         const [joinville, breuil, hippodrome] = await Promise.all([
           getLocationSchedules('joinville'),
           getLocationSchedules('breuil'),
           getLocationSchedules('hippodrome')
         ]);
 
+        // Charger alertes
+        const alerts = await Promise.all([
+          getLocationAlerts('joinville'),
+          getLocationAlerts('breuil'),
+          getLocationAlerts('hippodrome')
+        ]);
+        const allAlerts = [...new Set([...alerts[0], ...alerts[1], ...alerts[2]])];
+
+        // Afficher alertes
+        renderAlerts(allAlerts);
+
+        // Afficher horaires
         locationsContainer.innerHTML = '';
         renderLocation('Joinville-le-Pont', joinville);
         renderLocation('École du Breuil', breuil);
@@ -207,8 +266,30 @@
 
         lastUpdateEl.textContent = `Dernière mise à jour: ${new Date().toLocaleTimeString('fr-FR')}`;
       } catch (error) {
+        console.error(error);
         locationsContainer.innerHTML = `<div class="error">❌ Erreur: ${error.message}</div>`;
       }
+    }
+
+    function renderAlerts(alerts) {
+      if (alerts.length === 0) {
+        alertsContainer.innerHTML = '';
+        return;
+      }
+
+      alertsContainer.innerHTML = alerts.map(alert => `
+        <div class="alert-card">
+          <div class="alert-header">
+            ⚠️ ${alert.header}
+          </div>
+          ${alert.description ? `<div class="alert-description">${alert.description}</div>` : ''}
+          ${alert.affectedRoutes.length > 0 ? `
+            <div class="alert-routes">
+              ${alert.affectedRoutes.map(r => `<span class="route-badge">${r}</span>`).join('')}
+            </div>
+          ` : ''}
+        </div>
+      `).join('');
     }
 
     function renderLocation(title, schedules) {
@@ -222,9 +303,7 @@
         
         // Vérifier si des passages existent
         if (schedule.arrivals.length === 0) {
-          // Récupérer le routeId depuis les arrivals ou stop config
-          const routeId = schedule.stop.routeId || 'unknown';
-          const nextService = getNextServiceTime(routeId);
+          const nextService = schedule.stop.nextServiceTime;
           
           stopDiv.innerHTML = `
             <div class="stop-name">${schedule.stop.name}</div>
