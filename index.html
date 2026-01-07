@@ -186,35 +186,11 @@
 
   <script type="module">
     import { getLocationSchedules, startAutoRefresh } from './src/index.js';
-    import { TRANSPORT_COLORS } from './src/config/stops.js';
+    import { STOPS } from './src/config/stops.js';
+    import { getNextServiceTime } from './src/config/service-hours.js';
 
     const locationsContainer = document.getElementById('locations');
     const lastUpdateEl = document.getElementById('lastUpdate');
-
-    // 🕐 Horaires de service
-    const SERVICE_HOURS = {
-      rer: { start: 5, end: 1 }, // 5h00 - 01h00 (lendemain)
-      bus: { start: 6, end: 0 }, // 6h00 - 00h00
-      noctilien: { start: 0, end: 5 } // 00h30 - 05h30
-    };
-
-    function getNextServiceTime(type) {
-      const now = new Date();
-      const hour = now.getHours();
-      const schedule = SERVICE_HOURS[type];
-
-      // Service actif
-      if (schedule.start < schedule.end) {
-        if (hour >= schedule.start && hour < schedule.end) return null;
-      } else {
-        if (hour >= schedule.start || hour < schedule.end) return null;
-      }
-
-      // Calculer prochaine heure
-      const tomorrow = hour >= schedule.end && hour < schedule.start;
-      const nextDay = tomorrow ? 'demain' : 'aujourd\'hui';
-      return `${nextDay} à ${schedule.start}h00`;
-    }
 
     async function updateDashboard() {
       try {
@@ -246,7 +222,10 @@
         
         // Vérifier si des passages existent
         if (schedule.arrivals.length === 0) {
-          const nextService = getNextServiceTime(schedule.stop.type);
+          // Récupérer le routeId depuis les arrivals ou stop config
+          const routeId = schedule.stop.routeId || 'unknown';
+          const nextService = getNextServiceTime(routeId);
+          
           stopDiv.innerHTML = `
             <div class="stop-name">${schedule.stop.name}</div>
             <div class="no-service">
