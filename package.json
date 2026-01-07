@@ -1,0 +1,22 @@
+{
+  "name": "vincennes-transit-gtfs",
+  "version": "1.0.0",
+  "description": "Dashboard temps réel des transports Vincennes avec GTFS-Realtime IDFM",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "start": "node src/server.js"
+  },
+  "keywords": ["gtfs", "realtime", "idfm", "transport", "vincennes"],
+  "author": "plero75",
+  "license": "MIT",
+  "dependencies": {
+    "gtfs-realtime-bindings": "^1.2.0"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  }
+}
