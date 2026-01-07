@@ -3,6 +3,8 @@
  * Utilise le proxy HTTPS Cloudflare ratp-proxy pour éviter Mixed Content
  */
 
+import { decodeFeed } from './gtfs-proto.js';
+
 // 🎯 Configuration du proxy
 const USE_PROXY = true; // Mettre à false pour dev local
 const PROXY_BASE = 'https://ratp-proxy.hippodrome-proxy42.workers.dev';
@@ -15,27 +17,6 @@ const GTFS_RT_API = {
   alerts: `${API_BASE}/gtfs-rt-alerts-idfm`
 };
 
-// 📦 Charger gtfs-realtime-bindings depuis unpkg
-let GtfsRealtimeBindings;
-
-async function loadGtfsBindings() {
-  if (GtfsRealtimeBindings) return GtfsRealtimeBindings;
-  
-  // Charger le script depuis unpkg
-  if (typeof window !== 'undefined' && !window.GtfsRealtimeBindings) {
-    await new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = 'https://unpkg.com/gtfs-realtime-bindings@1.2.0/dist/index.js';
-      script.onload = resolve;
-      script.onerror = reject;
-      document.head.appendChild(script);
-    });
-    GtfsRealtimeBindings = window.GtfsRealtimeBindings;
-  }
-  
-  return GtfsRealtimeBindings;
-}
-
 /**
  * 🔄 Récupère les données temps réel (Trip Updates)
  */
@@ -47,15 +28,13 @@ export async function fetchTripUpdates() {
     }
 
     const buffer = await response.arrayBuffer();
-    const bindings = await loadGtfsBindings();
-    const FeedMessage = bindings.transit_realtime.FeedMessage;
-    const feed = FeedMessage.decode(new Uint8Array(buffer));
+    const feed = await decodeFeed(buffer);
 
-    console.log('✅ Trip updates loaded:', feed.entity.length, 'entities');
+    console.log('✅ Trip updates loaded:', feed.entity?.length || 0, 'entities');
 
     return {
-      timestamp: feed.header.timestamp,
-      entities: feed.entity
+      timestamp: feed.header?.timestamp,
+      entities: feed.entity || []
     };
   } catch (error) {
     console.error('❌ Erreur fetchTripUpdates:', error);
@@ -74,13 +53,11 @@ export async function fetchAlerts() {
     }
 
     const buffer = await response.arrayBuffer();
-    const bindings = await loadGtfsBindings();
-    const FeedMessage = bindings.transit_realtime.FeedMessage;
-    const feed = FeedMessage.decode(new Uint8Array(buffer));
+    const feed = await decodeFeed(buffer);
 
     return {
-      timestamp: feed.header.timestamp,
-      alerts: feed.entity.filter(e => e.alert)
+      timestamp: feed.header?.timestamp,
+      alerts: (feed.entity || []).filter(e => e.alert)
     };
   } catch (error) {
     console.error('❌ Erreur fetchAlerts:', error);
