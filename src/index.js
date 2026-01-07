@@ -6,6 +6,92 @@ import { fetchTripUpdates, fetchAlerts, filterByStopId, formatTimestamp, getWait
 import { GTFS_STOPS, STOPS_BY_LOCATION, TRANSPORT_COLORS } from './config/stops.js';
 
 /**
+ * 🕐 Horaires de reprise par ligne (statiques de secours)
+ */
+const SERVICE_RESUME_TIMES = {
+  // RER
+  'RER A': { start: '5:00', end: '1:15' },
+  
+  // Noctiliens
+  'N31': { start: '0:30', end: '5:30', isNight: true },
+  'N33': { start: '0:30', end: '5:30', isNight: true },
+  'N71': { start: '0:30', end: '5:30', isNight: true },
+  
+  // Bus de jour
+  '77': { start: '5:30', end: '0:45' },
+  '108': { start: '5:45', end: '0:30' },
+  '110': { start: '5:45', end: '0:30' },
+  '101': { start: '6:00', end: '0:15' },
+  '112': { start: '6:00', end: '0:15' },
+  '201': { start: '6:00', end: '0:30' },
+  '281': { start: '6:15', end: '0:00' },
+  '520': { start: '7:00', end: '20:00' }
+};
+
+/**
+ * 🕐 Calcule le prochain horaire de reprise
+ */
+function calculateNextService(lines) {
+  const now = new Date();
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  
+  let nextService = null;
+  let minDiff = Infinity;
+  
+  for (const line of lines) {
+    const schedule = SERVICE_RESUME_TIMES[line];
+    if (!schedule) continue;
+    
+    const [startH, startM] = schedule.start.split(':').map(Number);
+    const startMinutes = startH * 60 + startM;
+    
+    let diff;
+    let resumeTime;
+    let tomorrow = false;
+    
+    // Si service de nuit (après minuit)
+    if (schedule.isNight) {
+      if (currentMinutes < startMinutes) {
+        // Aujourd'hui
+        diff = startMinutes - currentMinutes;
+        resumeTime = schedule.start;
+      } else {
+        // Demain
+        diff = (1440 - currentMinutes) + startMinutes;
+        resumeTime = schedule.start;
+        tomorrow = true;
+      }
+    } else {
+      // Service de jour
+      if (currentMinutes < startMinutes) {
+        // Aujourd'hui
+        diff = startMinutes - currentMinutes;
+        resumeTime = schedule.start;
+      } else {
+        // Demain
+        diff = (1440 - currentMinutes) + startMinutes;
+        resumeTime = schedule.start;
+        tomorrow = true;
+      }
+    }
+    
+    if (diff < minDiff) {
+      minDiff = diff;
+      nextService = {
+        time: resumeTime,
+        tomorrow,
+        line
+      };
+    }
+  }
+  
+  if (!nextService) return null;
+  
+  const prefix = nextService.tomorrow ? 'demain à ' : 'à ';
+  return prefix + nextService.time;
+}
+
+/**
  * 🚍 Récupère les horaires pour un arrêt spécifique
  */
 export async function getStopSchedule(stopKey) {
@@ -23,37 +109,7 @@ export async function getStopSchedule(stopKey) {
   // Calculer le prochain horaire de reprise si aucun passage
   let nextServiceTime = null;
   if (filtered.length === 0) {
-    // Chercher le prochain passage pour cet arrêt dans toutes les données GTFS
-    const allStopTimes = entities
-      .flatMap(entity => {
-        if (!entity.tripUpdate?.stopTimeUpdate) return [];
-        return entity.tripUpdate.stopTimeUpdate
-          .filter(stu => stu.stopId === stopConfig.stopId)
-          .map(stu => ({
-            time: stu.arrival?.time || stu.departure?.time,
-            routeId: entity.tripUpdate.trip?.routeId
-          }));
-      })
-      .filter(st => st.time && st.time > Date.now() / 1000)
-      .sort((a, b) => a.time - b.time);
-
-    if (allStopTimes.length > 0) {
-      const nextDeparture = new Date(allStopTimes[0].time * 1000);
-      const today = new Date();
-      const isToday = nextDeparture.toDateString() === today.toDateString();
-      
-      nextServiceTime = nextDeparture.toLocaleString('fr-FR', {
-        weekday: isToday ? undefined : 'long',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-      
-      if (!isToday) {
-        nextServiceTime = `demain à ${nextServiceTime}`;
-      } else {
-        nextServiceTime = `à ${nextServiceTime}`;
-      }
-    }
+    nextServiceTime = calculateNextService(stopConfig.lines);
   }
 
   return {
@@ -85,6 +141,36 @@ export async function getLocationSchedules(location) {
   );
 
   return schedules.filter(s => s !== null);
+}
+
+/**
+ * ⚠️ Récupère les alertes pour un arrêt spécifique
+ */
+export async function getStopAlerts(stopId) {
+  const { alerts } = await fetchAlerts();
+  const relevantAlerts = [];
+
+  alerts.forEach(alert => {
+    const informedEntities = alert.alert?.informedEntity || [];
+    const affectsStop = informedEntities.some(entity => 
+      entity.stopId === stopId
+    );
+
+    if (affectsStop) {
+      relevantAlerts.push({
+        id: alert.id,
+        header: alert.alert.headerText?.translation?.[0]?.text || 'Alerte trafic',
+        description: alert.alert.descriptionText?.translation?.[0]?.text || '',
+        severity: alert.alert.severityLevel || 'UNKNOWN',
+        affectedRoutes: informedEntities
+          .map(e => e.routeId)
+          .filter(Boolean)
+          .filter((v, i, a) => a.indexOf(v) === i) // Unique
+      });
+    }
+  });
+
+  return relevantAlerts;
 }
 
 /**
