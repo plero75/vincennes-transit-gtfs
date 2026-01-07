@@ -25,7 +25,7 @@ export const GTFS_STOPS = {
     stopId: 'IDFM:39406',
     name: 'Joinville Bus 1',
     type: 'bus',
-    lines: ['77', '201', 'N33']
+    lines: ['77', '201', 'N33', 'N31']  // ✅ Ajout N31
   },
 
   // 🚌 JOINVILLE BUS (Arrêt 39407)
@@ -36,12 +36,12 @@ export const GTFS_STOPS = {
     lines: ['108', '110', '101', '281']
   },
 
-  // 🌙 JOINVILLE NOCTILIEN (Arrêt 39408)
-  joinville_n34: {
+  // 🌙 JOINVILLE NOCTILIEN (Arrêt 39408) - Renommé pour N31
+  joinville_noctilien: {
     stopId: 'IDFM:39408',
-    name: 'Joinville N34',
+    name: 'Joinville Noctilien',  // ✅ Nom générique
     type: 'noctilien',
-    lines: ['N34']
+    lines: ['N31', 'N33']  // ✅ Les vrais Noctiliens de Joinville
   },
 
   // 🚐 JOINVILLE NAVETTE (Arrêt 39409)
@@ -76,7 +76,7 @@ export const STOPS_BY_LOCATION = {
     'joinville_rer_boissy',
     'joinville_bus_77_201',
     'joinville_bus_multi',
-    'joinville_n34',
+    'joinville_noctilien',  // ✅ Renommé (avant: joinville_n34)
     'joinville_navette'
   ],
   breuil: ['ecole_breuil'],
