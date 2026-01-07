@@ -75,23 +75,3 @@ export function startAutoRefresh(callback, intervalMs = 30000) {
   callback(); // Exécution immédiate
   return setInterval(callback, intervalMs);
 }
-
-// 🎯 Exemples d'utilisation
-if (import.meta.url === `file://${process.argv[1]}`) {
-  console.log('🚍 Test du client GTFS-RT Vincennes\n');
-
-  // Test Joinville RER
-  console.log('🚉 === JOINVILLE RER A ===');
-  const joinvilleSchedule = await getStopSchedule('joinville_rer_paris');
-  console.log(joinvilleSchedule);
-
-  // Test Hippodrome
-  console.log('\n🏇 === HIPPODROME VINCENNES ===');
-  const hippoSchedule = await getStopSchedule('hippodrome');
-  console.log(hippoSchedule);
-
-  // Test alertes
-  console.log('\n⚠️ === ALERTES JOINVILLE ===');
-  const alerts = await getLocationAlerts('joinville');
-  console.log(`${alerts.length} alerte(s) trouvée(s)`);
-}
