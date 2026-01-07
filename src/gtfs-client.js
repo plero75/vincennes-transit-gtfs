@@ -1,15 +1,26 @@
 /**
  * 🚍 Client GTFS-Realtime pour IDFM
  * Utilise l'API publique de Jouca: http://gtfsidfm.clarifygdps.com
+ * Browser-compatible (pas de dépendances Node.js)
  */
-
-import GtfsRealtimeBindings from 'gtfs-realtime-bindings';
 
 // 🎯 API Endpoints
 const GTFS_RT_API = {
   trips: 'http://gtfsidfm.clarifygdps.com/gtfs-rt-trips-idfm',
   alerts: 'http://gtfsidfm.clarifygdps.com/gtfs-rt-alerts-idfm'
 };
+
+// 📦 Import dynamique de gtfs-realtime-bindings via CDN
+let GtfsRealtimeBindings;
+
+async function loadGtfsBindings() {
+  if (GtfsRealtimeBindings) return GtfsRealtimeBindings;
+  
+  // Utiliser le CDN jsDelivr pour charger gtfs-realtime-bindings
+  const module = await import('https://cdn.jsdelivr.net/npm/gtfs-realtime-bindings@1.2.0/+esm');
+  GtfsRealtimeBindings = module.default || module;
+  return GtfsRealtimeBindings;
+}
 
 /**
  * 🔄 Récupère les données temps réel (Trip Updates)
@@ -22,8 +33,11 @@ export async function fetchTripUpdates() {
     }
 
     const buffer = await response.arrayBuffer();
-    const FeedMessage = GtfsRealtimeBindings.transit_realtime.FeedMessage;
+    const bindings = await loadGtfsBindings();
+    const FeedMessage = bindings.transit_realtime.FeedMessage;
     const feed = FeedMessage.decode(new Uint8Array(buffer));
+
+    console.log('✅ Trip updates loaded:', feed.entity.length, 'entities');
 
     return {
       timestamp: feed.header.timestamp,
@@ -46,7 +60,8 @@ export async function fetchAlerts() {
     }
 
     const buffer = await response.arrayBuffer();
-    const FeedMessage = GtfsRealtimeBindings.transit_realtime.FeedMessage;
+    const bindings = await loadGtfsBindings();
+    const FeedMessage = bindings.transit_realtime.FeedMessage;
     const feed = FeedMessage.decode(new Uint8Array(buffer));
 
     return {
