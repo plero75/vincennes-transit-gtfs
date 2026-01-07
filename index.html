@@ -111,6 +111,43 @@
       font-size: 1.1rem;
     }
 
+    .no-service {
+      background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+      border-radius: 12px;
+      padding: 25px;
+      text-align: center;
+      border: 2px dashed #9ca3af;
+    }
+
+    .no-service-icon {
+      font-size: 3rem;
+      margin-bottom: 15px;
+      opacity: 0.6;
+    }
+
+    .no-service-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #4b5563;
+      margin-bottom: 10px;
+    }
+
+    .no-service-message {
+      color: #6b7280;
+      font-size: 0.95rem;
+      margin-bottom: 15px;
+    }
+
+    .resume-time {
+      background: #dbeafe;
+      color: #1e40af;
+      padding: 8px 16px;
+      border-radius: 20px;
+      display: inline-block;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
     .loading {
       text-align: center;
       padding: 40px;
@@ -154,6 +191,31 @@
     const locationsContainer = document.getElementById('locations');
     const lastUpdateEl = document.getElementById('lastUpdate');
 
+    // 🕐 Horaires de service
+    const SERVICE_HOURS = {
+      rer: { start: 5, end: 1 }, // 5h00 - 01h00 (lendemain)
+      bus: { start: 6, end: 0 }, // 6h00 - 00h00
+      noctilien: { start: 0, end: 5 } // 00h30 - 05h30
+    };
+
+    function getNextServiceTime(type) {
+      const now = new Date();
+      const hour = now.getHours();
+      const schedule = SERVICE_HOURS[type];
+
+      // Service actif
+      if (schedule.start < schedule.end) {
+        if (hour >= schedule.start && hour < schedule.end) return null;
+      } else {
+        if (hour >= schedule.start || hour < schedule.end) return null;
+      }
+
+      // Calculer prochaine heure
+      const tomorrow = hour >= schedule.end && hour < schedule.start;
+      const nextDay = tomorrow ? 'demain' : 'aujourd\'hui';
+      return `${nextDay} à ${schedule.start}h00`;
+    }
+
     async function updateDashboard() {
       try {
         const [joinville, breuil, hippodrome] = await Promise.all([
@@ -162,6 +224,7 @@
           getLocationSchedules('hippodrome')
         ]);
 
+        locationsContainer.innerHTML = '';
         renderLocation('Joinville-le-Pont', joinville);
         renderLocation('École du Breuil', breuil);
         renderLocation('Hippodrome de Vincennes', hippodrome);
@@ -180,18 +243,34 @@
       schedules.forEach(schedule => {
         const stopDiv = document.createElement('div');
         stopDiv.className = 'stop-group';
-        stopDiv.innerHTML = `
-          <div class="stop-name">${schedule.stop.name}</div>
-          <div class="arrivals">
-            ${schedule.arrivals.slice(0, 3).map(arr => `
-              <div class="arrival-item ${schedule.stop.type}">
-                <span class="arrival-route">${arr.routeId || 'N/A'}</span>
-                <span class="arrival-time">${arr.formattedTime || '--:--'}</span>
-                <span class="arrival-wait">${arr.waitingMinutes !== null ? arr.waitingMinutes + ' min' : '--'}</span>
-              </div>
-            `).join('')}
-          </div>
-        `;
+        
+        // Vérifier si des passages existent
+        if (schedule.arrivals.length === 0) {
+          const nextService = getNextServiceTime(schedule.stop.type);
+          stopDiv.innerHTML = `
+            <div class="stop-name">${schedule.stop.name}</div>
+            <div class="no-service">
+              <div class="no-service-icon">🌙</div>
+              <div class="no-service-title">Service terminé</div>
+              <div class="no-service-message">Aucun passage prévu pour le moment</div>
+              ${nextService ? `<div class="resume-time">⏰ Reprise ${nextService}</div>` : ''}
+            </div>
+          `;
+        } else {
+          stopDiv.innerHTML = `
+            <div class="stop-name">${schedule.stop.name}</div>
+            <div class="arrivals">
+              ${schedule.arrivals.slice(0, 3).map(arr => `
+                <div class="arrival-item ${schedule.stop.type}">
+                  <span class="arrival-route">${arr.routeId || 'N/A'}</span>
+                  <span class="arrival-time">${arr.formattedTime || '--:--'}</span>
+                  <span class="arrival-wait">${arr.waitingMinutes !== null ? arr.waitingMinutes + ' min' : '--'}</span>
+                </div>
+              `).join('')}
+            </div>
+          `;
+        }
+        
         card.appendChild(stopDiv);
       });
 
