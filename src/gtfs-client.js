@@ -1,13 +1,18 @@
 /**
  * 🚍 Client GTFS-Realtime pour IDFM
- * Utilise l'API publique de Jouca: http://gtfsidfm.clarifygdps.com
- * Browser-compatible (pas de dépendances Node.js)
+ * Utilise un proxy HTTPS Cloudflare pour éviter Mixed Content
  */
 
-// 🎯 API Endpoints
+// 🎯 Configuration du proxy
+const USE_PROXY = true; // Mettre à false pour dev local
+const PROXY_BASE = 'https://gtfs-proxy.hippodrome-proxy42.workers.dev';
+const DIRECT_API_BASE = 'http://gtfsidfm.clarifygdps.com';
+
+const API_BASE = USE_PROXY ? PROXY_BASE : DIRECT_API_BASE;
+
 const GTFS_RT_API = {
-  trips: 'http://gtfsidfm.clarifygdps.com/gtfs-rt-trips-idfm',
-  alerts: 'http://gtfsidfm.clarifygdps.com/gtfs-rt-alerts-idfm'
+  trips: `${API_BASE}/gtfs-rt-trips-idfm`,
+  alerts: `${API_BASE}/gtfs-rt-alerts-idfm`
 };
 
 // 📦 Import dynamique de gtfs-realtime-bindings via CDN
