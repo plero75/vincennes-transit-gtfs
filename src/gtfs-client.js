@@ -1,11 +1,11 @@
 /**
  * 🚍 Client GTFS-Realtime pour IDFM
- * Utilise un proxy HTTPS Cloudflare pour éviter Mixed Content
+ * Utilise le proxy HTTPS Cloudflare ratp-proxy pour éviter Mixed Content
  */
 
 // 🎯 Configuration du proxy
 const USE_PROXY = true; // Mettre à false pour dev local
-const PROXY_BASE = 'https://gtfs-proxy.hippodrome-proxy42.workers.dev';
+const PROXY_BASE = 'https://ratp-proxy.hippodrome-proxy42.workers.dev';
 const DIRECT_API_BASE = 'http://gtfsidfm.clarifygdps.com';
 
 const API_BASE = USE_PROXY ? PROXY_BASE : DIRECT_API_BASE;
